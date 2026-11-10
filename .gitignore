@@ -1,0 +1,40 @@
+# Abhängigkeiten
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Umgebung und Geheimnisse
+.env
+.env.*
+!.env.example
+*.local
+
+# Editoren
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+
+# Betriebssysteme
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (persönliche Einstellungen)
+.claude/settings.local.json
+CLAUDE.local.md
