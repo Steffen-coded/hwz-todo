@@ -1,60 +1,60 @@
 # PLAN: Wie die App gebaut wird
 
-Diese Datei füllt /plan aus docs/SPEC.md.
+Diese Datei füllt /plan aus docs/SPEC.md. Stand: Bau 2 (F1 Kanban-Board). Der Plan von Bau 1 steht in der Git-Historie (Commit «Bau 1: Pendenzen-Liste mit Fristen und Fokus-Kachel»).
 
 ## Stack
 
-Siehe docs/STACK.md. Keine Abweichungen.
+Siehe docs/STACK.md. Keine Abweichungen. Für Drag and Drop `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` (schon installiert).
 
 ## Ordner und Dateien
 
-- `index.html`: Look `candy` (setzt `scripts/setup.mjs` aus der SPEC).
-- `src/App.tsx`: App-Rahmen mit Hero, Fortschrittsring, Fokus-Kachel, Eingabe und Liste.
-- `src/lib/storage.ts`: localStorage lesen, schreiben, kaputte Daten abfangen.
-- `src/lib/date.ts`: Frist «TT.MM.JJJJ» prüfen und umwandeln, Frist anzeigen, «überfällig» berechnen, heutiges Datum als `YYYY-MM-DD`.
-- `src/lib/celebrate.ts`: Konfetti-Aufruf, im Test ersetzbar.
-- `src/lib/theme.ts`: Konfetti-Farben aus den CSS-Variablen lesen.
-- `src/lib/useHotkey.ts`: Taste «N» fokussiert die Eingabe.
-- `src/features/tasks/model.ts`: Typ Task und reine Funktionen addTask, toggleTask, removeTask, restoreTask, toggleStar, sortTasks, selectFocus.
-- `src/features/tasks/useTasks.ts`: Hook, verbindet model.ts mit storage.ts.
-- `src/features/tasks/components/TaskInput.tsx`: Titel- und Fristfeld, Enter fügt hinzu.
-- `src/features/tasks/components/TaskCard.tsx`: Eine Pendenz mit Checkbox, Frist, Badge «Überfällig», Stern und Löschen.
-- `src/features/tasks/components/TaskList.tsx`: Sortierte Liste mit Animationen.
-- `src/features/tasks/components/FocusTile.tsx`: Kachel «Nächster Schritt» oben.
-- `src/features/tasks/components/EmptyState.tsx`: Illustration, wenn keine Pendenzen da sind.
-- `src/components/ProgressRing.tsx`: Ring «erledigt/gesamt».
-- Zu jeder Datei mit Logik oder Verhalten der Test daneben (`*.test.ts` / `*.test.tsx`).
+- `src/lib/storage.ts`: Version 2, Migration `migrateV1toV2`, lädt Version-1-Daten verlustfrei.
+- `src/lib/storage.test.ts`: Migrationstest mit echten Daten im Format von Version 1.
+- `src/features/tasks/model.ts`: `status` statt `done`; neue Funktionen `moveTask`, `tasksByStatus`, `resolveDrop`; `toggleTask` und `selectFocus` nach neuer Regel; `sortTasks` entfällt (Reihenfolge = Array-Reihenfolge).
+- `src/features/tasks/model.test.ts`: Tests für die neuen und geänderten Funktionen.
+- `src/features/tasks/useTasks.ts`: Zusätzlich `moveTask`.
+- `src/features/tasks/components/Board.tsx`: Drei Spalten mit Drag and Drop.
+- `src/features/tasks/components/Board.test.tsx`: Spalten, Zähler, leere Spalte, Tastatur-Verschieben.
+- `src/features/tasks/components/TaskCard.tsx`: Liest `status`, lässt sich im Board als ziehbare Karte verwenden.
+- `src/features/tasks/components/FocusTile.tsx`: Liest `status` statt `done`.
+- `src/features/tasks/components/TaskList.tsx`: Wird gelöscht, das Board ersetzt die Liste.
+- `src/App.tsx`: Board statt Liste, Seitenbreite `max-w-6xl`.
+- Bestehende Tests (`TaskCard.test.tsx`, `FocusTile.test.tsx`, `TaskInput.test.tsx`, `ProgressRing.test.tsx`, `useTasks.test.ts`): Testdaten auf Version 2 umstellen.
 
 ## Datenmodell
 
 ```ts
+export type Status = 'todo' | 'doing' | 'done'
+
 export type Task = {
   id: string // crypto.randomUUID()
   title: string // getrimmt, 1 bis 200 Zeichen
-  done: boolean
+  status: Status // ersetzt done
   createdAt: number // Date.now()
   due: string | null // Frist als 'YYYY-MM-DD', null = keine Frist
-  starred: boolean // höchstens eine offene Pendenz hat true
+  starred: boolean // höchstens eine nicht erledigte Pendenz hat true
 }
 ```
 
-- localStorage `"hwz-todo"` = `{ version: 1, tasks: Task[] }`. Erste Version, darum keine Migration.
-- `loadState` füllt fehlende Felder (`due: null`, `starred: false`), damit unvollständige Daten nicht abstürzen.
-- Regeln in model.ts: `toggleStar` entfernt den Stern bei allen anderen. Abhaken entfernt den Stern. `selectFocus(tasks, today)` liefert die Pendenz mit Stern, sonst die offene mit der frühesten Frist, sonst die älteste offene, sonst `null`.
-- `sortTasks`: Offene mit Frist (früheste zuerst), offene ohne Frist (neueste zuerst), erledigte zuletzt.
-- `isOverdue(due, today)`: Frist vor heute und offen. Heute selbst ist nicht überfällig. `today` wird übergeben, damit Tests ein festes Datum nutzen.
+- localStorage `"hwz-todo"` = `{ version: 2, tasks: Task[] }`. `CURRENT_VERSION = 2`.
+- Reihenfolge in einer Spalte = Reihenfolge im Array (`tasksByStatus(tasks, status)` filtert, ohne umzusortieren).
+- **Migration `migrateV1toV2`:** Version-1-Aufgaben werden zuerst in die bisherige Anzeige-Reihenfolge gebracht (offene mit Frist, früheste oben; offene ohne Frist, neueste oben; erledigte). Dann gilt `done: true` → `status: 'done'`, `done: false` → `status: 'todo'`. Titel, Frist, Stern und `createdAt` bleiben. Eigener Test mit echten Version-1-Daten.
+- `addTask`: Neue Pendenz mit `status: 'todo'` ganz oben.
+- `toggleTask`: Nicht erledigt → `done` (Stern weg), erledigt → `todo` als oberste Karte in «Offen».
+- `moveTask(tasks, id, toStatus, toIndex)`: Setzt den Status und die Position innerhalb der Zielspalte. Nach `done` verschoben, entfällt der Stern.
+- `resolveDrop(tasks, activeId, overId)`: Rechnet aus dem dnd-kit-Ziel (Karten-ID oder Spalten-ID) `{ toStatus, toIndex }` aus. Reine Funktion, damit das Ablegen ohne Browser testbar ist.
+- `selectFocus(tasks)`: Stern (nicht erledigt) → oberste in `doing` → oberste in `todo` → `null`.
 
 ## Komponenten
 
-- **App-Rahmen mit ProgressRing:** Hero «Meine Aufgaben», Datum, Ring rechts (DESIGN.md, Rezept 1).
-- **FocusTile:** Grosse Karte `glass rounded-2xl border-2 shadow-pop p-6` mit Label «Nächster Schritt», Titel in `font-heading`, Frist, Checkbox und Stern. Ohne offene Pendenz: «Alles erledigt. Zeit für Kaffee.» (Karten-Stil aus Look Candy, Text-Regeln aus Rezept 7).
-- **TaskInput:** Titelfeld plus zweites shadcn-Input «TT.MM.JJJJ» (`aria-label="Frist (optional)"`). Ungültige Frist: Schütteln und Hinweis «Bitte als TT.MM.JJJJ eingeben» in `text-foreground`, verbunden über `aria-describedby` (DESIGN.md, Rezepte 2 und 9).
-- **TaskCard:** Checkbox, Titel, Frist in `font-mono`, Stern-Knopf (`Star` aus lucide-react, `aria-pressed`), Löschen. Überfällig: shadcn `<Badge variant="destructive">Überfällig</Badge>` und Karte mit `glow` (DESIGN.md, Rezepte 3 und 7).
-- **TaskList:** Sortierte Liste mit AnimatePresence (DESIGN.md, Rezept 4).
-- **EmptyState:** Candy-Wolke und freundlicher Satz (DESIGN.md, Rezept 5).
+- **Board:** Drei Spalten «Offen», «In Arbeit», «Erledigt» mit Zähler-Badge, `DndContext` mit Pointer- und Keyboard-Sensor, `SortableContext` je Spalte, `DragOverlay`, leuchtende Zielspalte, leere Spalte mit «Hierher ziehen», deutsche Screenreader-Ansagen (DESIGN.md, Rezept 6). Auf Handys wischbare Spalten mit Snap (DESIGN.md, Rezept 8).
+- **TaskCard:** Wie bisher (Checkbox, Frist, «Überfällig», Stern, Löschen), im Board mit `useSortable` und `opacity-50` beim Ziehen (DESIGN.md, Rezepte 3, 6 und 7).
+- **FocusTile:** Wie bisher, zeigt `selectFocus` nach neuer Regel.
+- **App-Rahmen:** Wie bisher, mit `max-w-6xl` (DESIGN.md, Rezept 1).
+- **Konfetti:** Auch, wenn eine Karte in «Erledigt» abgelegt wird (DESIGN.md, Rezept 6).
 
 ## Risiken
 
-- Datum hängt von der Zeitzone ab, «überfällig» kippt um Mitternacht falsch: Frist nur als `YYYY-MM-DD` speichern, `today` lokal berechnen und als Parameter übergeben, Tests mit festem Datum.
-- «31.02.2027» wird von `Date` still zu 03.03.2027: Parser prüft Tag, Monat und Jahr nach dem Umwandeln zurück, eigener Test dafür.
-- Fokus-Kachel und Liste zeigen dieselbe Pendenz, Abhaken an zwei Orten kann auseinanderlaufen: Beide rufen dieselbe Funktion aus useTasks auf, die Kachel berechnet sich nur aus `selectFocus`.
+- Alte Daten passen nicht zum neuen Modell: Migration mit Test aus echten Version-1-Daten (AGENTS.md, Regel 9), zuerst gebaut.
+- motion-`layout` auf der Karte und der Transform von dnd-kit stören sich: Im Board steuert nur dnd-kit die Position (kein `layout` auf ziehbaren Karten), die Ein- und Ausblend-Animation bleibt.
+- Drag and Drop lässt sich in jsdom kaum mit der Maus testen: Ablege-Logik als reine Funktionen (`resolveDrop`, `moveTask`) testen, Tastatur-Verschieben im Komponententest versuchen, sonst Klick-Anleitung im Review.

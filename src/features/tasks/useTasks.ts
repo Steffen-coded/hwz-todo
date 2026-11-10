@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as model from '@/features/tasks/model'
-import type { Task } from '@/features/tasks/model'
+import type { Status, Task } from '@/features/tasks/model'
 import { CURRENT_VERSION, loadState, saveState } from '@/lib/storage'
 
 export type RemovedTask = { task: Task; index: number }
@@ -47,5 +47,9 @@ export function useTasks() {
     setTasks((current) => model.restoreTask(current, task, index))
   }, [])
 
-  return { tasks, addTask, toggleTask, toggleStar, removeTask, restoreTask }
+  const moveTask = useCallback((id: string, toStatus: Status, toIndex: number) => {
+    setTasks((current) => model.moveTask(current, id, toStatus, toIndex))
+  }, [])
+
+  return { tasks, addTask, toggleTask, toggleStar, removeTask, restoreTask, moveTask }
 }

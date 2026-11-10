@@ -9,7 +9,7 @@ function makeTask(overrides: Partial<Task>): Task {
   return {
     id: crypto.randomUUID(),
     title: 'Aufgabe',
-    done: false,
+    status: 'todo',
     createdAt: 1,
     due: null,
     starred: false,
@@ -22,8 +22,8 @@ describe('ProgressRing', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 1,
-        tasks: [makeTask({ title: 'A', done: true }), makeTask({ title: 'B' })],
+        version: 2,
+        tasks: [makeTask({ title: 'A', status: 'done' }), makeTask({ title: 'B' })],
       }),
     )
     render(<App />)

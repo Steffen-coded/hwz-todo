@@ -16,7 +16,7 @@ function makeTask(overrides: Partial<Task>): Task {
   return {
     id: crypto.randomUUID(),
     title: 'Aufgabe',
-    done: false,
+    status: 'todo',
     createdAt: 1,
     due: null,
     starred: false,
@@ -25,7 +25,7 @@ function makeTask(overrides: Partial<Task>): Task {
 }
 
 function seed(tasks: Task[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, tasks }))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, tasks }))
 }
 
 function tile() {
@@ -43,11 +43,21 @@ describe('FocusTile', () => {
     vi.mocked(celebrate).mockClear()
   })
 
-  it('shows the task with the earliest due date', () => {
+  it('shows the top open task', () => {
     seed(threeTasks())
     render(<App />)
+    expect(within(tile()).getByText('Dezember')).toBeInTheDocument()
+    expect(within(tile()).getByText('15.12.2026')).toBeInTheDocument()
+    expect(within(tile()).queryByText('November')).not.toBeInTheDocument()
+  })
+
+  it('shows the top task in progress before the top open task', () => {
+    const tasks = threeTasks()
+    tasks[1].status = 'doing'
+    tasks[2].status = 'doing'
+    seed(tasks)
+    render(<App />)
     expect(within(tile()).getByText('November')).toBeInTheDocument()
-    expect(within(tile()).getByText('20.11.2026')).toBeInTheDocument()
     expect(within(tile()).queryByText('Dezember')).not.toBeInTheDocument()
   })
 
@@ -57,15 +67,38 @@ describe('FocusTile', () => {
     seed(tasks)
     render(<App />)
     expect(within(tile()).getByText('Ohne Frist')).toBeInTheDocument()
-    expect(within(tile()).queryByText('November')).not.toBeInTheDocument()
+    expect(within(tile()).queryByText('Dezember')).not.toBeInTheDocument()
   })
 
   it('follows a star set in the list', async () => {
     const user = userEvent.setup()
     seed(threeTasks())
     render(<App />)
-    await user.click(screen.getByRole('button', { name: '«Dezember» als Fokus markieren' }))
     expect(within(tile()).getByText('Dezember')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '«Ohne Frist» als Fokus markieren' }))
+    expect(within(tile()).getByText('Ohne Frist')).toBeInTheDocument()
+    expect(within(tile()).queryByText('Dezember')).not.toBeInTheDocument()
+  })
+
+  it('prefers a starred open task over the task in progress, and falls back after unstarring', async () => {
+    const user = userEvent.setup()
+    const tasks = threeTasks()
+    tasks[1].status = 'doing'
+    seed(tasks)
+    render(<App />)
+    expect(within(tile()).getByText('November')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '«Ohne Frist» als Fokus markieren' }))
+    expect(within(tile()).getByText('Ohne Frist')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '«Ohne Frist» als Fokus markieren' }))
+    expect(within(tile()).getByText('November')).toBeInTheDocument()
+    expect(within(tile()).queryByText('Ohne Frist')).not.toBeInTheDocument()
+  })
+
+  it('shows the coffee message when only done tasks are left', () => {
+    seed([makeTask({ title: 'Fertig', status: 'done' })])
+    render(<App />)
+    expect(within(tile()).getByText('Alles erledigt. Zeit für Kaffee.')).toBeInTheDocument()
+    expect(within(tile()).queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
   it('checking in the tile shows the next step, then the coffee message', async () => {
@@ -74,7 +107,7 @@ describe('FocusTile', () => {
     render(<App />)
     await user.click(within(tile()).getByRole('checkbox'))
     expect(celebrate).toHaveBeenCalledTimes(1)
-    expect(within(tile()).getByText('Dezember')).toBeInTheDocument()
+    expect(within(tile()).getByText('November')).toBeInTheDocument()
     await user.click(within(tile()).getByRole('checkbox'))
     expect(within(tile()).getByText('Ohne Frist')).toBeInTheDocument()
     await user.click(within(tile()).getByRole('checkbox'))

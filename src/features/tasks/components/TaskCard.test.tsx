@@ -23,7 +23,7 @@ function makeTask(overrides: Partial<Task>): Task {
   return {
     id: crypto.randomUUID(),
     title: 'Aufgabe',
-    done: false,
+    status: 'todo',
     createdAt: 1,
     due: null,
     starred: false,
@@ -32,7 +32,7 @@ function makeTask(overrides: Partial<Task>): Task {
 }
 
 function seed(tasks: Task[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, tasks }))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, tasks }))
 }
 
 function storedTasks(): Task[] {
@@ -42,16 +42,42 @@ function storedTasks(): Task[] {
 }
 
 describe('TaskList and TaskCard', () => {
-  it('shows stored tasks sorted by due date', () => {
-    seed([
-      makeTask({ title: 'Später', due: isoOffset(10), createdAt: 1 }),
-      makeTask({ title: 'Früher', due: isoOffset(2), createdAt: 2 }),
-    ])
+  it('shows version-1 tasks in their former due date order', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        tasks: [
+          { id: 'a', title: 'Später', done: false, createdAt: 1, due: isoOffset(10), starred: false },
+          { id: 'b', title: 'Früher', done: false, createdAt: 2, due: isoOffset(2), starred: false },
+        ],
+      }),
+    )
     render(<App />)
-    const items = within(screen.getByRole('list')).getAllByRole('listitem')
+    const items = screen.getAllByRole('listitem')
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent('Früher')
     expect(items[1]).toHaveTextContent('Später')
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '') as { version: number; tasks: Task[] }
+    expect(stored.version).toBe(2)
+    expect(stored.tasks.map((t) => [t.title, t.status])).toEqual([
+      ['Früher', 'todo'],
+      ['Später', 'todo'],
+    ])
+  })
+
+  it('shows version-2 tasks in stored order, done ones last', () => {
+    seed([
+      makeTask({ title: 'Erledigt', status: 'done' }),
+      makeTask({ title: 'Später', due: isoOffset(10) }),
+      makeTask({ title: 'Früher', due: isoOffset(2) }),
+    ])
+    render(<App />)
+    const items = screen.getAllByRole('listitem')
+    expect(items).toHaveLength(3)
+    expect(items[0]).toHaveTextContent('Später')
+    expect(items[1]).toHaveTextContent('Früher')
+    expect(items[2]).toHaveTextContent('Erledigt')
   })
 
   it('marks a task due yesterday as overdue but not one due today', () => {
@@ -61,7 +87,7 @@ describe('TaskList and TaskCard', () => {
       makeTask({ title: 'Heute fällig', due: todayIso() }),
     ])
     render(<App />)
-    const items = within(screen.getByRole('list')).getAllByRole('listitem')
+    const items = screen.getAllByRole('listitem')
     const overdue = items.find((li) => li.textContent?.includes('Gestern fällig'))
     const today = items.find((li) => li.textContent?.includes('Heute fällig'))
     expect(overdue).toBeDefined()
@@ -81,15 +107,34 @@ describe('TaskList and TaskCard', () => {
       const user = userEvent.setup()
       seed([makeTask({ title: 'Einkaufen' })])
       render(<App />)
-      const checkbox = screen.getByRole('checkbox', { name: '«Einkaufen» erledigt' })
-      await user.click(checkbox)
-      expect(checkbox).toHaveAttribute('aria-checked', 'true')
-      expect(storedTasks()[0].done).toBe(true)
+      // The card moves to another column and remounts (the old one animates out),
+      // so the checkbox is queried again inside the target column.
+      const checkbox = (column: string) =>
+        within(screen.getByRole('region', { name: column })).getByRole('checkbox', {
+          name: '«Einkaufen» erledigt',
+        })
+      await user.click(checkbox('Offen'))
+      expect(checkbox('Erledigt')).toHaveAttribute('aria-checked', 'true')
+      expect(storedTasks()[0].status).toBe('done')
       expect(celebrate).toHaveBeenCalledTimes(1)
-      await user.click(checkbox)
-      expect(checkbox).toHaveAttribute('aria-checked', 'false')
-      expect(storedTasks()[0].done).toBe(false)
+      await user.click(checkbox('Erledigt'))
+      expect(checkbox('Offen')).toHaveAttribute('aria-checked', 'false')
+      expect(storedTasks()[0].status).toBe('todo')
       expect(celebrate).toHaveBeenCalledTimes(1)
+    })
+
+    it('reopens a done task as the top card in the open tasks', async () => {
+      const user = userEvent.setup()
+      seed([makeTask({ title: 'Eins' }), makeTask({ title: 'Zwei', status: 'done' })])
+      render(<App />)
+      await user.click(screen.getByRole('checkbox', { name: '«Zwei» erledigt' }))
+      expect(storedTasks().map((t) => [t.title, t.status])).toEqual([
+        ['Zwei', 'todo'],
+        ['Eins', 'todo'],
+      ])
+      const items = screen.getAllByRole('listitem')
+      expect(items[0]).toHaveTextContent('Zwei')
+      expect(celebrate).not.toHaveBeenCalled()
     })
 
     it('moves the star from the first task to the second', async () => {

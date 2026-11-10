@@ -32,7 +32,7 @@ export function FocusTile({ task, overdue, onToggle, onToggleStar }: FocusTilePr
 
   function handleToggle() {
     if (!task) return
-    if (!task.done) celebrate(originOf(checkboxRef.current))
+    if (task.status !== 'done') celebrate(originOf(checkboxRef.current))
     onToggle(task.id)
   }
 
@@ -49,7 +49,7 @@ export function FocusTile({ task, overdue, onToggle, onToggleStar }: FocusTilePr
           <Checkbox
             key={task.id}
             ref={checkboxRef}
-            checked={task.done}
+            checked={task.status === 'done'}
             onCheckedChange={handleToggle}
             aria-label={`Nächster Schritt «${task.title}» erledigt`}
             className="mt-1.5 size-6 rounded-md transition-look data-[state=checked]:animate-pop data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"

@@ -8,8 +8,8 @@ describe('useTasks', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 1,
-        tasks: [{ id: 'a', title: 'Gespeichert', done: false, createdAt: 1, due: null, starred: false }],
+        version: 2,
+        tasks: [{ id: 'a', title: 'Gespeichert', status: 'todo', createdAt: 1, due: null, starred: false }],
       }),
     )
     const { result } = renderHook(() => useTasks())
@@ -57,7 +57,7 @@ describe('useTasks', () => {
     const b = result.current.tasks[1]
 
     act(() => result.current.toggleTask(b.id))
-    expect(result.current.tasks[1].done).toBe(true)
+    expect(result.current.tasks[1].status).toBe('done')
 
     let removed: ReturnType<typeof result.current.removeTask> = null
     act(() => {
@@ -71,5 +71,21 @@ describe('useTasks', () => {
     })
     expect(result.current.tasks.map((t) => t.title)).toEqual(['A', 'B', 'C'])
     expect(loadState().tasks.map((t) => t.title)).toEqual(['A', 'B', 'C'])
+  })
+
+  it('moves a task, saves it and keeps it after a reload', () => {
+    const { result, unmount } = renderHook(() => useTasks())
+    act(() => result.current.addTask('B'))
+    act(() => result.current.addTask('A'))
+    const a = result.current.tasks[0]
+    act(() => result.current.toggleStar(a.id))
+
+    act(() => result.current.moveTask(a.id, 'done', 0))
+    expect(loadState().tasks.find((t) => t.id === a.id)).toMatchObject({ status: 'done', starred: false })
+    unmount()
+
+    const reloaded = renderHook(() => useTasks())
+    const moved = reloaded.result.current.tasks.find((t) => t.id === a.id)
+    expect(moved).toMatchObject({ status: 'done', starred: false })
   })
 })

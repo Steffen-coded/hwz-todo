@@ -50,3 +50,33 @@ Format je Task:
 - Dateien: src/features/tasks/components/FocusTile.tsx, src/features/tasks/components/FocusTile.test.tsx, src/components/ProgressRing.tsx, src/components/ProgressRing.test.tsx, src/features/tasks/components/EmptyState.tsx, src/App.tsx.
 - Test zuerst: Kachel zeigt die Pendenz mit Frist 20.11.2026 vor der mit 15.12.2026; mit Stern zeigt sie die markierte; Abhaken in der Kachel zeigt den nächsten Schritt, ohne offene Pendenz «Alles erledigt. Zeit für Kaffee.»; Ring hat aria-label «1 von 2 erledigt».
 - Fertig wenn: «Fokus automatisch», «Fokus per Stern», «Fokus abhaken», «Abhaken» (Zähler), «Schmales Fenster» (360 px ohne seitliches Scrollen, Klick-Anleitung) erfüllt, DESIGN.md, Rezepte 1, 5 und 8 erfüllt, npm run check grün.
+
+[x] 7  Migration mit Test
+- Ziel: Das Datenmodell nutzt `status` statt `done` (Version 2), alte Daten werden verlustfrei übernommen, die App funktioniert wie bisher.
+- Dateien: src/lib/storage.ts, src/lib/storage.test.ts, src/features/tasks/model.ts, src/features/tasks/model.test.ts, src/features/tasks/useTasks.ts, src/features/tasks/useTasks.test.ts, src/features/tasks/components/TaskCard.tsx, src/features/tasks/components/TaskCard.test.tsx, src/features/tasks/components/TaskList.tsx, src/features/tasks/components/FocusTile.tsx, src/features/tasks/components/FocusTile.test.tsx, src/features/tasks/components/TaskInput.test.tsx, src/components/ProgressRing.test.tsx, src/App.tsx.
+- Test zuerst: loadState mit echten Version-1-Daten liefert Version 2, offene als `todo` in bisheriger Reihenfolge, erledigte als `done`, Frist und Stern erhalten; toggleTask auf `done` stellt die Karte oben in `todo` zurück; selectFocus nimmt Stern vor oberster `doing` vor oberster `todo`.
+- Fertig wenn: «Alte Daten», «Neue Karte» (Logik), «Nach Erledigt» (Checkbox), «Fokus aus der Spalte» (Logik), «Stern hat Vorrang» (Logik) per Test belegt, npm run check grün.
+
+[x] 8  Verschieben als reine Funktion
+- Ziel: Karten lassen sich per Funktion in eine Spalte an eine Position verschieben, das Ablege-Ziel von dnd-kit wird in Spalte und Position umgerechnet.
+- Dateien: src/features/tasks/model.ts, src/features/tasks/model.test.ts, src/features/tasks/useTasks.ts, src/features/tasks/useTasks.test.ts.
+- Test zuerst: moveTask von `todo` nach `doing` an Index 0 setzt Status und Position; moveTask innerhalb `todo` von unten nach oben ändert die Reihenfolge; moveTask nach `done` entfernt den Stern; resolveDrop auf eine Spalten-ID gibt das Ende dieser Spalte, auf eine Karten-ID deren Spalte und Index.
+- Fertig wenn: «Zwischen Spalten ziehen» (Logik), «In der Spalte sortieren» (Logik), Speichern nach Neuladen per Test belegt, npm run check grün.
+
+[x] 9  Board anzeigen
+- Ziel: Statt der Liste stehen drei Spalten mit Zählern, leere Spalten zeigen «Hierher ziehen», auf dem Handy wischt man die Spalten.
+- Dateien: src/features/tasks/components/Board.tsx, src/features/tasks/components/Board.test.tsx, src/features/tasks/components/TaskList.tsx (löschen), src/App.tsx.
+- Test zuerst: Board zeigt die Überschriften «Offen», «In Arbeit», «Erledigt» in dieser Reihenfolge mit den richtigen Zählern; Karten stehen in der Spalte ihres Status; leere Spalte zeigt «Hierher ziehen»; eine neue Pendenz erscheint oben in «Offen».
+- Fertig wenn: «Drei Spalten», «Neue Karte», «Leere Spalte» (Anzeige), «Board auf dem Handy» (Klick-Anleitung 360 px) erfüllt, DESIGN.md, Rezepte 6 (Raster, Spalte) und 8 erfüllt, npm run check grün.
+
+[x] 10  Drag and Drop mit Maus und Tastatur
+- Ziel: Karten lassen sich mit Maus oder Tastatur zwischen und innerhalb der Spalten ziehen, die Zielspalte leuchtet, Ansagen sind deutsch.
+- Dateien: src/features/tasks/components/Board.tsx, src/features/tasks/components/Board.test.tsx, src/features/tasks/components/TaskCard.tsx.
+- Test zuerst: Tastatur auf einer Karte in «Offen» (Leertaste, Pfeil nach rechts, Leertaste) verschiebt sie in eine andere Spalte und speichert; Esc während des Ziehens lässt sie an ihrem Platz; die Ansage-Texte sind deutsch.
+- Fertig wenn: «Zwischen Spalten ziehen», «In der Spalte sortieren», «Leere Spalte» (nimmt Karte an), «Per Tastatur» erfüllt (wo jsdom nicht reicht: Klick-Anleitung), DESIGN.md, Rezept 6 (Drag and Drop) erfüllt, npm run check grün.
+
+[x] 11  Erledigt-Effekte und Fokus im Board
+- Ziel: Ablegen in «Erledigt» zeigt Konfetti und zählt den Ring hoch, die Fokus-Kachel folgt der Regel Stern → «In Arbeit» → «Offen».
+- Dateien: src/features/tasks/components/Board.tsx, src/features/tasks/components/Board.test.tsx, src/features/tasks/components/FocusTile.test.tsx.
+- Test zuerst: Verschieben nach «Erledigt» ruft celebrate einmal auf und der Ring zeigt eins mehr; Kachel zeigt die oberste Karte aus «In Arbeit», bei leerer Spalte die oberste aus «Offen», mit Stern die markierte, sonst «Alles erledigt. Zeit für Kaffee.».
+- Fertig wenn: «Nach Erledigt», «Fokus aus der Spalte», «Stern hat Vorrang» in der Oberfläche belegt, npm run check grün.

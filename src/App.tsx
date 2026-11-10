@@ -7,7 +7,7 @@ import { ProgressRing } from '@/components/ProgressRing'
 import { EmptyState } from '@/features/tasks/components/EmptyState'
 import { FocusTile } from '@/features/tasks/components/FocusTile'
 import { TaskInput } from '@/features/tasks/components/TaskInput'
-import { TaskList } from '@/features/tasks/components/TaskList'
+import { Board } from '@/features/tasks/components/Board'
 import { isTaskOverdue, selectFocus } from '@/features/tasks/model'
 import { useTasks } from '@/features/tasks/useTasks'
 import { todayIso } from '@/lib/date'
@@ -20,11 +20,11 @@ const todayLabel = new Intl.DateTimeFormat('de-CH', {
 })
 
 export default function App() {
-  const { tasks, addTask, toggleTask, toggleStar, removeTask, restoreTask } = useTasks()
+  const { tasks, addTask, toggleTask, toggleStar, removeTask, restoreTask, moveTask } = useTasks()
   const titleRef = useRef<HTMLInputElement>(null)
   useHotkey('n', () => titleRef.current?.focus())
   const focus = selectFocus(tasks)
-  const doneCount = tasks.filter((t) => t.done).length
+  const doneCount = tasks.filter((t) => t.status === 'done').length
 
   function handleDelete(id: string) {
     const removed = removeTask(id)
@@ -38,7 +38,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <TooltipProvider>
-        <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+        <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
           <header className="flex items-center justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-gradient font-heading text-4xl font-bold tracking-tight sm:text-6xl">
@@ -58,7 +58,13 @@ export default function App() {
           )}
           <TaskInput onAdd={addTask} titleRef={titleRef} />
           {tasks.length > 0 ? (
-            <TaskList tasks={tasks} onToggle={toggleTask} onToggleStar={toggleStar} onDelete={handleDelete} />
+            <Board
+              tasks={tasks}
+              onToggle={toggleTask}
+              onToggleStar={toggleStar}
+              onDelete={handleDelete}
+              onMove={moveTask}
+            />
           ) : (
             <EmptyState />
           )}

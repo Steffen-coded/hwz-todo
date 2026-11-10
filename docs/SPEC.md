@@ -78,4 +78,51 @@ Candy
 
 ## Features
 
-(leer)
+### F1: Kanban-Board
+
+Ich sehe auf einen Blick, was offen ist, woran ich gerade arbeite und was erledigt ist, und lege die Reihenfolge per Drag and Drop selbst fest.
+
+1. Drei Spalten
+   - Gegeben: Es gibt Pendenzen in verschiedenen Zuständen.
+   - Wenn: Ich die App öffne.
+   - Dann: Statt der Liste stehen drei Spalten «Offen», «In Arbeit» und «Erledigt» in dieser Reihenfolge, jede mit der Anzahl ihrer Karten im Kopf. Frist und Badge «Überfällig» sind auf den Karten weiterhin sichtbar.
+2. Alte Daten
+   - Gegeben: Aufgaben aus der alten Version sind gespeichert.
+   - Wenn: Ich die neue Version öffne.
+   - Dann: Alle Aufgaben sind noch da, im richtigen Zustand. Offene stehen in «Offen» in der bisherigen Reihenfolge (früheste Frist oben), erledigte in «Erledigt», Titel, Frist und Stern bleiben erhalten.
+3. Neue Karte
+   - Gegeben: Das Board ist offen.
+   - Wenn: Ich eine Pendenz per Enter erfasse.
+   - Dann: Sie erscheint als oberste Karte in «Offen».
+4. Zwischen Spalten ziehen
+   - Gegeben: Eine Karte steht in «Offen».
+   - Wenn: Ich sie mit der Maus in «In Arbeit» ziehe.
+   - Dann: Die Zielspalte leuchtet beim Darüberziehen, die Karte steht danach an der Ablagestelle in «In Arbeit», beide Zähler stimmen und nach dem Neuladen ist alles gleich.
+5. In der Spalte sortieren
+   - Gegeben: In «Offen» stehen drei Karten.
+   - Wenn: Ich die unterste Karte ganz nach oben ziehe.
+   - Dann: Sie ist die oberste Karte in «Offen», auch nach dem Neuladen.
+6. Leere Spalte
+   - Gegeben: Die Spalte «In Arbeit» ist leer.
+   - Wenn: Ich das Board ansehe.
+   - Dann: Die Spalte zeigt einen gestrichelten Bereich «Hierher ziehen» und nimmt eine Karte an.
+7. Per Tastatur
+   - Gegeben: Der Fokus liegt auf einer Karte in «Offen».
+   - Wenn: Ich Leertaste, zweimal Pfeil nach rechts und wieder Leertaste drücke.
+   - Dann: Die Karte steht in «Erledigt», und ein Screenreader hört eine deutsche Ansage. Esc während des Ziehens lässt die Karte an ihrem Platz.
+8. Nach Erledigt
+   - Gegeben: Eine Karte steht in «Offen» oder «In Arbeit».
+   - Wenn: Ich sie nach «Erledigt» ziehe oder ihre Checkbox anklicke.
+   - Dann: Sie steht in «Erledigt», der Text ist durchgestrichen, Konfetti erscheint und der Fortschrittsring zählt eins hoch. Checkbox in «Erledigt» wieder anklicken stellt sie als oberste Karte nach «Offen» zurück.
+9. Fokus aus der Spalte
+   - Gegeben: Kein Stern ist gesetzt. In «In Arbeit» stehen zwei Karten, in «Offen» eine.
+   - Wenn: Ich das Board ansehe.
+   - Dann: Die Fokus-Kachel zeigt die oberste Karte aus «In Arbeit». Ist «In Arbeit» leer, zeigt sie die oberste aus «Offen». Sind beide leer, zeigt sie «Alles erledigt. Zeit für Kaffee.»
+10. Stern hat Vorrang
+    - Gegeben: In «In Arbeit» steht eine Karte, in «Offen» eine Karte mit Stern.
+    - Wenn: Ich das Board ansehe.
+    - Dann: Die Fokus-Kachel zeigt die Karte mit Stern. Entferne ich den Stern, zeigt sie die oberste Karte aus «In Arbeit».
+11. Board auf dem Handy
+    - Gegeben: Das Fenster ist 360 px breit.
+    - Wenn: Ich das Board ansehe.
+    - Dann: Die Seite scrollt nicht seitlich. Die Spalten wische ich einzeln nebeneinander durch, jede rastet mittig ein, und jede Karte ist lesbar und bedienbar.
